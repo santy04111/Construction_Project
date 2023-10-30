@@ -8,6 +8,7 @@ import com.barberia.barberia.entities.Cita;
 
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,7 +42,7 @@ public class CitaService {
 
     public Cita crearNuevaReserva(Cita reservaRequest) {
         // Validar la disponibilidad del horario
-        if (!esHorarioDisponible(Cita.getInicio(), reservaRequest.getFinalizacion(), reservaRequest.getBarbero())) {
+        if (!esHorarioDisponible(reservaRequest.getInicio(), reservaRequest.getFinalizacion(), reservaRequest.getBarbero())) {
             throw new HorarioNoDisponibleException("El horario seleccionado no está disponible.");
         }
 
@@ -55,16 +56,25 @@ public class CitaService {
         nuevaCita.setRecordatorio(false); // Por defecto, el recordatorio está desactivado
 
         // Guardar la cita en la base de datos
-        return citaRepository.save(nuevaCita);
+        citaRepository.save(nuevaCita);
+
+        // Construir el resumen de la reserva
+        return nuevaCita;
+
+
     }
 
-    private boolean esHorarioDisponible(LocalDateTime inicio, LocalDateTime finalizacion, String barbero) {
-        // Consulta la base de datos para verificar si hay solapamientos con otras citas del mismo barbero.
-        List<Cita> citasSolapadas = citaRepository.findCitasSolapadas(inicio, finalizacion, barbero);
+    private boolean esHorarioDisponible(String inicio, String finalizacion, String barbero) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime inicioDateTime = LocalDateTime.parse(inicio, formatter);
+        LocalDateTime finalizacionDateTime = LocalDateTime.parse(finalizacion, formatter);
 
-        // Si no hay citas solapadas, el horario está disponible.
+        // Consulta la base de datos para verificar si hay otras citas del mismo barbero.
+        List<Cita> citasSolapadas = citaRepository.findCitasSolapadas(inicioDateTime, finalizacionDateTime, barbero);
+
+        // Si no está ocupado, el horario está disponible.
         return citasSolapadas.isEmpty();
     }
 }
 
-
+ 
