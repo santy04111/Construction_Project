@@ -1,15 +1,18 @@
 package com.barberia.barberia.controllers;
 
+import com.barberia.barberia.entities.Cita;
+import com.barberia.barberia.exceptions.HorarioNoDisponibleException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.barberia.barberia.services.CitaService;
-import com.barberia.barberia.entities.Cita;
 
 import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("Citas")
+@RequestMapping("/citas")
 public class CitaController {
 
     private final CitaService citaService;
@@ -25,17 +28,25 @@ public class CitaController {
     }
 
     @GetMapping("/{id}")
-    public Optional<Cita> getCitaById(@PathVariable Integer id) {
-        return citaService.getCitaById(id);
+    public ResponseEntity<Cita> getCitaById(@PathVariable Integer id) {
+        return citaService.getCitaById(id)
+                .map(cita -> new ResponseEntity<>(cita, HttpStatus.OK))
+                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
-    @PostMapping
-    public Cita saveCita(@RequestBody Cita cita) {
-        return citaService.saveCita(cita);
+    @PostMapping("/nueva")
+    public ResponseEntity<?> crearNuevaCita(@RequestBody Cita cita) {
+        try {
+            Cita nuevaCita = citaService.saveCita(cita);
+            return new ResponseEntity<>(nuevaCita, HttpStatus.CREATED);
+        } catch (HorarioNoDisponibleException ex) {
+            return new ResponseEntity<>("El horario seleccionado no está disponible.", HttpStatus.BAD_REQUEST);
+        }
     }
 
     @DeleteMapping("/{id}")
-    public void deleteCita(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteCita(@PathVariable Integer id) {
         citaService.deleteCita(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }
