@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import com.barberia.barberia.services.CitaService;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/citas")

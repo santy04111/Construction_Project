@@ -1,8 +1,7 @@
 package com.barberia.barberia.repository;
 
+import com.barberia.barberia.entities.Barbero;
 import com.barberia.barberia.entities.Cita;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -20,4 +19,10 @@ public interface CitaRepository extends JpaRepository<Cita, Integer> {
 //                                      @Param("Finalizacion") LocalDateTime Finalizacion,
 //                                      @Param("Barbero") String Barbero);
 
+    List<Cita> findByBarberoAndInicioBetweenAndFinalizacionBetween(
+            Barbero barbero, LocalDateTime inicio1, LocalDateTime fin1,
+            LocalDateTime inicio2, LocalDateTime fin2);
+
+    boolean existsByBarbero1(Barbero barbero);
 }
+
