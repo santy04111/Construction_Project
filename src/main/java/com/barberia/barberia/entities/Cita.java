@@ -16,6 +16,7 @@ import java.time.OffsetDateTime;
 @Table(name = "\"citas\"")
 public class Cita {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY, generator = "native")   
     @Column(name = "\"idcita\"", nullable = false)
     private Integer id;
 
@@ -40,7 +41,7 @@ public class Cita {
     @Column(name = "\"inicio\"")
     private OffsetDateTime inicio;
 
-//    @JsonManagedReference
+    //    @JsonManagedReference
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "barbero_id")
     private Barbero barbero1;
