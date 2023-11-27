@@ -30,7 +30,7 @@ public class CitaController {
         return citaService.getAllCitas();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/Obtenercitas")
     public ResponseEntity<Cita> getCitaById(@PathVariable Integer id) {
         Optional<Cita> cita = citaService.getCitaById(id);
         return cita.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
