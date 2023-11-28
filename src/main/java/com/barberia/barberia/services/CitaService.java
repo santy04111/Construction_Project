@@ -3,6 +3,7 @@ package com.barberia.barberia.services;
 import com.barberia.barberia.entities.Barbero;
 import com.barberia.barberia.entities.Cita;
 import com.barberia.barberia.exceptions.BarberoNoExisteException;
+import com.barberia.barberia.exceptions.CorreoUsuarioNoDisponibleException;
 import com.barberia.barberia.exceptions.FechaHoraPasadaException;
 import com.barberia.barberia.repository.BarberoRepository;
 import jakarta.transaction.Transactional;
@@ -22,11 +23,13 @@ import java.util.Optional;
 public class CitaService {
     private final CitaRepository citaRepository;
     private final BarberoRepository barberoRepository;
+    private final EmailService emailService;
 
     @Autowired
-    public CitaService(CitaRepository citaRepository, BarberoRepository barberoRepository) {
+    public CitaService(CitaRepository citaRepository, BarberoRepository barberoRepository, EmailService emailService) {
         this.citaRepository = citaRepository;
         this.barberoRepository = barberoRepository;
+        this.emailService = emailService;
     }
 
     public List<Cita> getAllCitas() {
@@ -37,11 +40,18 @@ public class CitaService {
         return citaRepository.findById(id);
     }
 
-    public Cita saveCita(Cita cita) {
+    public Cita saveCita(Cita cita) throws CorreoUsuarioNoDisponibleException {
         if (barberoRepository.existsById(cita.getBarbero1().getId())) {
             if (!esFechaHoraPasada(cita.getInicio())) {
                 if (horarioDisponible(cita)) {
-                    return citaRepository.save(cita);
+                    Cita nuevaCita = citaRepository.save(cita);
+
+                    // Si el recordatorio es true, envía el correo al destinatario de la cita
+                    if (cita.getRecordatorio()) {
+                        enviarRecordatorioPorCorreo(nuevaCita);
+                    }
+
+                    return nuevaCita;
                 } else {
                     throw new HorarioNoDisponibleException("El horario no está disponible.");
                 }
@@ -53,9 +63,26 @@ public class CitaService {
         }
     }
 
+    private void enviarRecordatorioPorCorreo(Cita cita) throws CorreoUsuarioNoDisponibleException {
+        // Obtener el correo del usuario registrado para la cita
+        String to = cita.getEmail(); // Asegúrate de tener el método getCorreoUsuario() en tu entidad Cita
+        if (to == null || to.isEmpty()) {
+            // Si el correo del usuario no está disponible, puedes manejarlo de alguna manera (por ejemplo, lanzar una excepción)
+            throw new CorreoUsuarioNoDisponibleException("El correo del usuario no está disponible para enviar el recordatorio.");
+        }
+
+        // Preparar el cuerpo del correo con los detalles de la cita
+        String subject = "Recordatorio de cita";
+        String body = "Detalles de la cita:\n" +
+                "Fecha y hora: " + cita.getInicio() + "\n" +
+                "Barbero: " + cita.getBarbero1().getNombre() + "\n" +
+                "Otro detalle necesario..."; // Agregar otros detalles que desees enviar en el correo
+
+        // Enviar el correo
+        emailService.sendEmailwithAttachment(to, subject, body);
+    }
+
     private boolean horarioDisponible(Cita nuevaCita) {
-
-
         int count = citaRepository.countCitasEnHorario(
                 nuevaCita.getInicio().minusMinutes(30),
                 nuevaCita.getFinalizacion().plusMinutes(30),
@@ -72,5 +99,6 @@ public class CitaService {
         citaRepository.deleteById(id);
     }
 }
+
 
 

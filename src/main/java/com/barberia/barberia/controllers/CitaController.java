@@ -3,6 +3,7 @@ package com.barberia.barberia.controllers;
 import com.barberia.barberia.entities.Barbero;
 import com.barberia.barberia.entities.Cita;
 import com.barberia.barberia.exceptions.BarberoNoExisteException;
+import com.barberia.barberia.exceptions.CorreoUsuarioNoDisponibleException;
 import com.barberia.barberia.exceptions.FechaHoraPasadaException;
 import com.barberia.barberia.exceptions.HorarioNoDisponibleException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,33 +31,27 @@ public class CitaController {
         return citaService.getAllCitas();
     }
 
-    @GetMapping("/Obtenercitas")
+    @GetMapping("/obtenercitas")
     public ResponseEntity<Cita> getCitaById(@PathVariable Integer id) {
         Optional<Cita> cita = citaService.getCitaById(id);
         return cita.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/crear")
+
+    @PostMapping("/crearcita")
     public ResponseEntity<?> createCita(@RequestBody Cita cita) {
         try {
             Cita nuevaCita = citaService.saveCita(cita);
             return ResponseEntity.ok(nuevaCita);
         } catch (HorarioNoDisponibleException | BarberoNoExisteException | FechaHoraPasadaException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-    @PutMapping("/id")
-    public ResponseEntity<Cita> updateCita(@PathVariable Integer id, @RequestBody Cita updatedCita) {
-        Optional<Cita> existingCita = citaService.getCitaById(id);
-        if (existingCita.isPresent()) {
-            updatedCita.setId(id);
-            return ResponseEntity.ok(citaService.saveCita(updatedCita));
-        } else {
-            return ResponseEntity.notFound().build();
+        } catch (CorreoUsuarioNoDisponibleException e) {
+            // Manejar el caso cuando el correo del usuario no está disponible
+            return ResponseEntity.badRequest().body("No se puede enviar el recordatorio. Correo del usuario no disponible.");
         }
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/deletecita")
     public ResponseEntity<Void> deleteCita(@PathVariable Integer id) {
         Optional<Cita> existingCita = citaService.getCitaById(id);
         if (existingCita.isPresent()) {

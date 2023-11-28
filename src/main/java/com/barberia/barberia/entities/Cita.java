@@ -3,9 +3,7 @@ package com.barberia.barberia.entities;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.OffsetDateTime;
 
@@ -13,6 +11,9 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @Entity
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @Table(name = "\"citas\"")
 public class Cita {
     @Id
@@ -45,5 +46,9 @@ public class Cita {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "barbero_id")
     private Barbero barbero1;
+
+
+    @Column(name = "\"email\"", length = Integer.MAX_VALUE)
+    private String email;
 
 }
