@@ -2,21 +2,20 @@ package com.barberia.barberia.services;
 
 import com.barberia.barberia.entities.Barbero;
 import com.barberia.barberia.entities.Cita;
-import com.barberia.barberia.exceptions.BarberoNoExisteException;
-import com.barberia.barberia.exceptions.CorreoUsuarioNoDisponibleException;
-import com.barberia.barberia.exceptions.FechaHoraPasadaException;
+import com.barberia.barberia.exceptions.*;
 import com.barberia.barberia.repository.BarberoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 import com.barberia.barberia.repository.CitaRepository;
-import com.barberia.barberia.exceptions.HorarioNoDisponibleException;
 
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Transactional
 @Service
@@ -24,6 +23,9 @@ public class CitaService {
     private final CitaRepository citaRepository;
     private final BarberoRepository barberoRepository;
     private final EmailService emailService;
+
+    private final AtomicBoolean estaProcesandoCita = new AtomicBoolean(false);
+
 
     @Autowired
     public CitaService(CitaRepository citaRepository, BarberoRepository barberoRepository, EmailService emailService) {
@@ -40,28 +42,48 @@ public class CitaService {
         return citaRepository.findById(id);
     }
 
-    public Cita saveCita(Cita cita) throws CorreoUsuarioNoDisponibleException {
-        if (barberoRepository.existsById(cita.getBarbero1().getId())) {
-            if (!esFechaHoraPasada(cita.getInicio())) {
-                if (horarioDisponible(cita)) {
-                    Cita nuevaCita = citaRepository.save(cita);
 
-                    // Si el recordatorio es true, envía el correo al destinatario de la cita
-                    if (cita.getRecordatorio()) {
-                        enviarRecordatorioPorCorreo(nuevaCita);
+        public Cita saveCita(Cita cita) throws CorreoUsuarioNoDisponibleException, SolicitudDuplicadaException {
+        if (estaProcesandoCita.compareAndSet(false, true)) {
+            try {
+                if (barberoRepository.existsById(cita.getBarbero1().getId())) {
+                    if (!esFechaHoraPasada(cita.getInicio())) {
+                        if (horarioDisponible(cita)) {
+                            Cita nuevaCita = citaRepository.save(cita);
+
+                            if (cita.getRecordatorio()) {
+                                enviarRecordatorioPorCorreo(nuevaCita);
+                            }
+
+                            return nuevaCita;
+                        } else {
+                            throw new HorarioNoDisponibleException("El horario no está disponible.");
+                        }
+                    } else {
+                        throw new FechaHoraPasadaException("La fecha y hora de la cita están en el pasado.");
                     }
-
-                    return nuevaCita;
                 } else {
-                    throw new HorarioNoDisponibleException("El horario no está disponible.");
+                    throw new BarberoNoExisteException("El barbero con id " + cita.getBarbero1().getId() + " no existe.");
                 }
-            } else {
-                throw new FechaHoraPasadaException("La fecha y hora de la cita están en el pasado.");
+            } finally {
+                estaProcesandoCita.set(false);
             }
         } else {
-            throw new BarberoNoExisteException("El barbero con id " + cita.getBarbero1().getId() + " no existe.");
+            enviarCorreoOperacionConcurrente();
+            throw new SolicitudDuplicadaException("No se pueden procesar dos citas al mismo tiempo.");
         }
     }
+
+
+    private void enviarCorreoOperacionConcurrente() {
+        String to = "gonzaleztrianakevin@hotmail.com";
+        String subject = "Operación Concurrente Detectada";
+        String body = "Se ha intentado registrar una cita mientras otra estaba en proceso. Intente nuevamente.";
+
+        emailService.sendEmailwithAttachment(to, subject, body);
+    }
+
+
 
     private void enviarRecordatorioPorCorreo(Cita cita) throws CorreoUsuarioNoDisponibleException {
         // Obtener el correo del usuario registrado para la cita
