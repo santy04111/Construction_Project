@@ -10,7 +10,4 @@ public class HorarioNoDisponibleException extends RuntimeException {
         super(message);
     }
 
-    public HorarioNoDisponibleException(String message, Throwable cause) {
-        super(message, cause);
-    }
 }
